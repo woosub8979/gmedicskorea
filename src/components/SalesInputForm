@@ -1,0 +1,56 @@
+import { useState } from "react";
+
+// 영업사원 입력 폼 컴포넌트
+function SalesInputForm({ onSubmit }) {
+  const [client, setClient] = useState("");
+  const [phone, setPhone] = useState("");
+  const [meeting, setMeeting] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // 입력된 데이터를 객체로 생성 후 상위 컴포넌트에 전달
+    const inputData = { client, phone, meeting };
+    onSubmit(inputData);
+    // 제출 후 폼 초기화
+    setClient("");
+    setPhone("");
+    setMeeting("");
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
+      <div>
+        <label>방문 업체:</label>
+        <input
+          type="text"
+          value={client}
+          onChange={(e) => setClient(e.target.value)}
+          placeholder="업체명을 입력하세요"
+          required
+        />
+      </div>
+      <div>
+        <label>전화번호:</label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="전화번호를 입력하세요"
+          required
+        />
+      </div>
+      <div>
+        <label>미팅 내용:</label>
+        <textarea
+          value={meeting}
+          onChange={(e) => setMeeting(e.target.value)}
+          placeholder="미팅 내용을 입력하세요"
+          required
+        />
+      </div>
+      <button type="submit">제출</button>
+    </form>
+  );
+}
+
+export default SalesInputForm;
