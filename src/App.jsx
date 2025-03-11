@@ -9,28 +9,25 @@ import {
   Typography,
   Container,
   Paper,
+  LinearProgress
 } from "@mui/material";
 
 /** 한국 시간(로컬 타임존) 기준 날짜 문자열 (YYYY-MM-DD) 반환 함수 */
 function formatDateLocal(date) {
-  const offset = date.getTimezoneOffset() * 60000; // 분 -> 밀리초
+  const offset = date.getTimezoneOffset() * 60000;
   const localDate = new Date(date.getTime() - offset);
   return localDate.toISOString().split("T")[0];
 }
 
-/** 커스텀 훅: 구글 스프레드시트 데이터를 가져옴 */
+/** 커스텀 훅: 구글 시트 데이터를 가져옴 */
 function useGoogleSheetData(sheetId) {
   const [data, setData] = useState([]);
-
   useEffect(() => {
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
     fetch(url)
       .then((res) => res.text())
       .then((text) => {
-        const jsonString = text.substring(
-          text.indexOf("{"),
-          text.lastIndexOf("}") + 1
-        );
+        const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
         const json = JSON.parse(jsonString);
         const rows = json.table.rows.map((row) =>
           row.c.map((cell) => (cell ? cell.v : ""))
@@ -39,17 +36,16 @@ function useGoogleSheetData(sheetId) {
       })
       .catch((err) => console.error("구글 시트 데이터 가져오기 오류:", err));
   }, [sheetId]);
-
   return data;
 }
 
-/** 1) 로그인 컴포넌트 (ID와 패스워드 기반 로그인) */
+/** 1) 로그인 컴포넌트 */
 function Login({ onLogin }) {
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // 하드코딩된 사용자 정보
+  // 하드코딩된 사용자 정보 (예시)
   const users = [
     { id: "김춘석", name: "김춘석대표", role: "admin", password: "1234" },
     { id: "유기상", name: "유기상팀장", role: "sales", password: "1234" },
@@ -111,8 +107,6 @@ function Login({ onLogin }) {
 function SalesInputForm({ onSubmit }) {
   const SHEET_ID = "1LcIZSVl5s2RG5x4_Q1wG6_yhmVONNw-qk4esUXVTux8";
   const clientData = useGoogleSheetData(SHEET_ID);
-
-  // 방문 시간 기본값: 현재 시각의 "HH:MM" (24시간 형식)
   const now = new Date();
   const defaultTime = now.toTimeString().slice(0, 5);
 
@@ -126,7 +120,6 @@ function SalesInputForm({ onSubmit }) {
   const handleClientChange = (e) => {
     const value = e.target.value;
     setClient(value);
-    // 업체명(B열, index 1)
     const matchingRow = clientData.find((row) => row[1] === value);
     if (matchingRow) {
       setBusinessReg(matchingRow[0] || "");
@@ -150,7 +143,6 @@ function SalesInputForm({ onSubmit }) {
       address,
     };
     onSubmit(inputData);
-    // 폼 초기화
     setClient("");
     setPhone("");
     setMeeting("");
@@ -230,7 +222,7 @@ function SalesInputForm({ onSubmit }) {
   );
 }
 
-/** 3) 영업 기록 상세 보기 (영업사원 전용, 수정 기능 포함) */
+/** 3) 영업 기록 상세 보기 (수정 기능 포함) */
 function SalesRecordDetail({ record, onBack, onUpdate }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedRecord, setEditedRecord] = useState({ ...record });
@@ -343,8 +335,11 @@ function SalesRecordDetail({ record, onBack, onUpdate }) {
 
 /** 4) 내 기록 목록 (영업사원 전용) */
 function SalesRecordList({ records, currentUser, onSelectRecord, onBack }) {
-  const myRecords = records.filter((r) => r.userId === currentUser.id);
-
+  const myRecords = records.filter(
+    (r) => r.userId === currentUser.id && r.date === selectedDate
+  );
+  // 위 selectedDate는 App 컴포넌트의 state로 전달받는 것이 더 좋지만,
+  // 여기서는 목록에 날짜 정보가 포함된 경우로 가정합니다.
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Typography variant="h6" gutterBottom>
@@ -358,7 +353,6 @@ function SalesRecordList({ records, currentUser, onSelectRecord, onBack }) {
             <Typography>
               날짜: {record.date} - 업체: {record.client}
             </Typography>
-            {/* 상세 보기 버튼 추가 */}
             <Button
               variant="outlined"
               sx={{ mt: 1 }}
@@ -370,7 +364,7 @@ function SalesRecordList({ records, currentUser, onSelectRecord, onBack }) {
         ))
       )}
       <Button variant="outlined" onClick={onBack}>
-        뒤로가기
+        캘린더로 돌아가기
       </Button>
     </Container>
   );
@@ -379,12 +373,10 @@ function SalesRecordList({ records, currentUser, onSelectRecord, onBack }) {
 /** 5) 관리자용 코멘트 입력 폼 */
 function CommentForm({ record, onAddComment }) {
   const [comment, setComment] = useState(record.comment || "");
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onAddComment(record.id, comment);
   };
-
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
       <TextField
@@ -480,10 +472,7 @@ function AdminCalendarDashboard({ records, onAddComment }) {
                 <Typography>
                   코멘트: {record.comment || "없음"}
                 </Typography>
-                <CommentForm
-                  record={record}
-                  onAddComment={onAddComment}
-                />
+                <CommentForm record={record} onAddComment={onAddComment} />
               </Paper>
             ))
           )}
@@ -493,24 +482,102 @@ function AdminCalendarDashboard({ records, onAddComment }) {
   );
 }
 
-/** 7) 메인 앱 컴포넌트 */
+/** 7) PlanForm 컴포넌트: 계획 입력 */
+function PlanForm({ onAddPlan, onSavePlan }) {
+  const [planText, setPlanText] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (planText.trim()) {
+      const newPlan = { text: planText, completed: false };
+      onAddPlan(newPlan);
+      setPlanText("");
+      // 계획 자동 저장 API 호출 (백엔드 연동)
+      if (onSavePlan) onSavePlan(newPlan);
+    }
+  };
+
+  return (
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+      <Typography variant="h6">오늘의 계획 작성</Typography>
+      <TextField
+        label="계획 내용"
+        value={planText}
+        onChange={(e) => setPlanText(e.target.value)}
+        fullWidth
+        margin="normal"
+      />
+      <Button type="submit" variant="contained">
+        계획 추가
+      </Button>
+    </Box>
+  );
+}
+
+/** 8) PlanList 컴포넌트: 계획 목록 */
+function PlanList({ plans, onToggleComplete, onDeletePlan }) {
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="h6">작성된 계획</Typography>
+      {plans.length === 0 ? (
+        <Typography>아직 작성된 계획이 없습니다.</Typography>
+      ) : (
+        plans.map((plan, i) => (
+          <Paper key={i} sx={{ p: 2, mb: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Button onClick={() => onToggleComplete(i)}>
+                {plan.completed ? "완료" : "미완료"}
+              </Button>
+              <Typography
+                variant="body1"
+                sx={{ ml: 2, textDecoration: plan.completed ? "line-through" : "none" }}
+              >
+                {plan.text}
+              </Typography>
+              <Button onClick={() => onDeletePlan(i)} sx={{ ml: "auto" }}>
+                삭제
+              </Button>
+            </Box>
+          </Paper>
+        ))
+      )}
+    </Box>
+  );
+}
+
+/** 9) PlanProgress 컴포넌트: 이행률 표시 */
+function PlanProgress({ plans }) {
+  const total = plans.length;
+  const completed = plans.filter((plan) => plan.completed).length;
+  const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="subtitle1">
+        계획 이행률: {progress}% ({completed}/{total})
+      </Typography>
+      <LinearProgress variant="determinate" value={progress} />
+    </Box>
+  );
+}
+
+/** 10) 메인 앱 컴포넌트 */
 function App() {
   const [step, setStep] = useState("login");
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  // 영업 기록 관련 state (기존 기능)
   const [records, setRecords] = useState([]);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [recordIdCounter, setRecordIdCounter] = useState(1);
+  // 계획 관리 관련 state
+  const [plans, setPlans] = useState([]);
 
   useEffect(() => {
     const storedRecords = localStorage.getItem("records");
     const storedCounter = localStorage.getItem("recordIdCounter");
-    if (storedRecords) {
-      setRecords(JSON.parse(storedRecords));
-    }
-    if (storedCounter) {
-      setRecordIdCounter(Number(storedCounter));
-    }
+    if (storedRecords) setRecords(JSON.parse(storedRecords));
+    if (storedCounter) setRecordIdCounter(Number(storedCounter));
   }, []);
 
   useEffect(() => {
@@ -521,6 +588,7 @@ function App() {
     localStorage.setItem("recordIdCounter", recordIdCounter.toString());
   }, [recordIdCounter]);
 
+  // 로그인 처리
   const handleLogin = (user) => {
     setCurrentUser(user);
     if (user.role === "admin") {
@@ -530,20 +598,21 @@ function App() {
     }
   };
 
-  // 날짜 선택: 기록이 있으면 목록, 없으면 입력 폼으로
+  // 날짜 선택 시, 해당 날짜에 기록이 있으면 기록 목록으로, 없으면 계획 작성 화면으로 이동
   const handleDateSelect = (date) => {
-    setSelectedDate(date);
+    const formattedDate = formatDateLocal(date);
+    setSelectedDate(formattedDate);
     const userRecords = records.filter(
-      (r) => r.date === date && r.userId === currentUser.id
+      (r) => r.date === formattedDate && r.userId === currentUser.id
     );
     if (userRecords.length > 0) {
       setStep("salesRecordList");
     } else {
-      setStep("salesInput");
+      setStep("plan");
     }
   };
 
-  // 입력 폼 제출
+  // 영업 기록 입력 폼 제출 처리
   const handleSalesInputSubmit = (data) => {
     const newRecord = {
       id: recordIdCounter,
@@ -556,15 +625,19 @@ function App() {
       time: data.time,
       businessReg: data.businessReg,
       address: data.address,
-      comment: "", // 관리자 코멘트
+      comment: "",
     };
     setRecords([...records, newRecord]);
     setRecordIdCounter(recordIdCounter + 1);
     setCurrentRecord(newRecord);
     setStep("salesRecordDetail");
+
+    // (예시) 백엔드 API 호출하여 Google Sheets에 저장하는 로직 추가 가능
+    // const API_URL = import.meta.env.VITE_API_URL;
+    // fetch(`${API_URL}/saveRecord`, { ... });
   };
 
-  // 기록 수정
+  // 영업 기록 수정 처리
   const handleUpdateRecord = (updatedRecord) => {
     const updatedRecords = records.map((record) =>
       record.id === updatedRecord.id ? updatedRecord : record
@@ -573,7 +646,7 @@ function App() {
     setCurrentRecord(updatedRecord);
   };
 
-  // 관리자 코멘트 추가
+  // 관리자 코멘트 추가 처리
   const handleAddComment = (recordId, comment) => {
     const updatedRecords = records.map((record) =>
       record.id === recordId ? { ...record, comment } : record
@@ -581,10 +654,32 @@ function App() {
     setRecords(updatedRecords);
   };
 
-  // 목록에서 "상세 보기" 버튼을 누르면 상세 페이지로 이동
+  // 목록에서 "상세 보기" 버튼 클릭 시 해당 기록 선택
   const handleSelectRecord = (record) => {
     setCurrentRecord(record);
     setStep("salesRecordDetail");
+  };
+
+  // 계획 추가 처리 (계획 자동 저장 API 호출 예시 포함)
+  const handleAddPlan = (newPlan) => {
+    setPlans([...plans, newPlan]);
+    // (예시) 계획 데이터를 백엔드로 전송하여 Google Sheets에 저장하는 로직
+    // const API_URL = import.meta.env.VITE_API_URL;
+    // fetch(`${API_URL}/savePlan`, { ... });
+  };
+
+  // 계획 완료 토글
+  const handleTogglePlanComplete = (index) => {
+    setPlans((prevPlans) =>
+      prevPlans.map((plan, i) =>
+        i === index ? { ...plan, completed: !plan.completed } : plan
+      )
+    );
+  };
+
+  // 계획 삭제
+  const handleDeletePlan = (index) => {
+    setPlans((prevPlans) => prevPlans.filter((_, i) => i !== index));
   };
 
   return (
@@ -595,24 +690,42 @@ function App() {
 
       {step === "login" && <Login onLogin={handleLogin} />}
 
-      {step === "salesCalendar" &&
-        currentUser &&
-        currentUser.role === "sales" && (
-          <Container maxWidth="sm" sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              캘린더 (영업사원용)
-            </Typography>
-            <Paper sx={{ p: 2 }} elevation={3}>
-              <Calendar
-                onChange={(date) => {
-                  const formattedDate = formatDateLocal(date);
-                  handleDateSelect(formattedDate);
-                }}
-                value={new Date()}
-              />
-            </Paper>
-          </Container>
-        )}
+      {step === "salesCalendar" && currentUser && currentUser.role === "sales" && (
+        <Container maxWidth="sm" sx={{ mt: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            캘린더 (영업사원용)
+          </Typography>
+          <Paper sx={{ p: 2 }} elevation={3}>
+            <Calendar
+              onChange={(date) => {
+                const formattedDate = formatDateLocal(date);
+                handleDateSelect(formattedDate);
+              }}
+              value={new Date()}
+            />
+          </Paper>
+        </Container>
+      )}
+
+      {step === "plan" && currentUser && currentUser.role === "sales" && (
+        <Container maxWidth="sm" sx={{ mt: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {selectedDate} 계획
+          </Typography>
+          <PlanForm onAddPlan={handleAddPlan} />
+          <PlanList
+            plans={plans}
+            onToggleComplete={handleTogglePlanComplete}
+            onDeletePlan={handleDeletePlan}
+          />
+          <PlanProgress plans={plans} />
+          <Box sx={{ mt: 2 }}>
+            <Button variant="outlined" onClick={() => setStep("salesCalendar")}>
+              캘린더로 돌아가기
+            </Button>
+          </Box>
+        </Container>
+      )}
 
       {step === "salesInput" && currentUser?.role === "sales" && (
         <SalesInputForm onSubmit={handleSalesInputSubmit} />
@@ -632,7 +745,7 @@ function App() {
         <SalesRecordList
           records={records}
           currentUser={currentUser}
-          onSelectRecord={handleSelectRecord} // 상세 보기로 이동
+          onSelectRecord={handleSelectRecord}
           onBack={() => setStep("salesCalendar")}
         />
       )}
